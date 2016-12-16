@@ -1,5 +1,5 @@
-FROM php:7.0.7-alpine
-MAINTAINER Christian Lück <christian@lueck.tv>
+FROM php:7.1.0-alpine
+MAINTAINER Adam Kuśmierz <adam@kusmierz.be>
 
 ## Install php and dependencies
 RUN set -ex \
@@ -8,16 +8,18 @@ RUN set -ex \
 
 ## php odbc hack (@see https://github.com/docker-library/php/issues/103)
 RUN set -x \
+    && apk add --no-cache unixodbc-dev ${PHPIZE_DEPS} \
+    && docker-php-source extract \
     && cd /usr/src/php/ext/odbc \
-    && apk add --no-cache unixodbc-dev $PHPIZE_DEPS \
     && phpize \
     && sed -ri 's@^ *test +"\$PHP_.*" *= *"no" *&& *PHP_.*=yes *$@#&@g' configure \
-    && docker-php-ext-configure odbc --with-unixODBC=shared,/usr \
+    && ./configure --with-unixODBC=shared,/usr \
     && docker-php-ext-install odbc \
-    && apk del $PHPIZE_DEPS
+    && apk del ${PHPIZE_DEPS} \
+    && docker-php-source delete
 
 ## Add Tini
-RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community/ tini
+RUN apk add --no-cache tini
 ENTRYPOINT ["/sbin/tini", "--"]
 
 ## Add the files
